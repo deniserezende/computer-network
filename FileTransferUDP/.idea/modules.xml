@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/FileTransfer.iml" filepath="$PROJECT_DIR$/.idea/FileTransfer.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/FileTransferUDP.iml" filepath="$PROJECT_DIR$/.idea/FileTransferUDP.iml" />
     </modules>
   </component>
 </project>
