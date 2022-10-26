@@ -141,8 +141,8 @@ class FileTransferUDP:
                 logging.warning(f'lost_packages.count({p})={lost_packages.count(p)}')
                 if lost_packages.count(p) == 0:
                     try:
-                        package = file_list[p]
-                        logging.warning(f'popping file[{p}] with id= {package[1]}')
+                        package = file_list[0]
+                        logging.warning(f'popping file[{0}] with id= {package[1]}')
                         file_list.pop(0) # tava p e tava errado, é 0?
                         logging.info(f'One more package successfully sent')
                     except:
