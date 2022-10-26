@@ -133,13 +133,17 @@ class FileTransferUDP:
                 lost_packages[i] = int.from_bytes(lost_packages_temp[i*4:i*4+4], "big")
 
             logging.warning(f'lost_packages={lost_packages}')
-
+            for i in range(0, end_range):
+                temp = file_list[i]
+                logging.warning(f"file_list[{i}]={temp[1]}")
             # Removing the packages that have been sent from the list "to be sent"
             for p in range(0, end_range):
                 logging.warning(f'lost_packages.count({p})={lost_packages.count(p)}')
                 if lost_packages.count(p) == 0:
                     try:
-                        file_list.pop(p)
+                        package = file_list[p]
+                        logging.warning(f'popping file[{p}] with id= {package[1]}')
+                        file_list.pop(0) # tava p e tava errado, é 0?
                         logging.info(f'One more package successfully sent')
                     except:
                         if not file_list:
