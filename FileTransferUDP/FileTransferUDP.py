@@ -2,7 +2,6 @@ import logging
 import socket
 import os
 import time
-import select
 
 
 class FileTransferUDP:
@@ -35,7 +34,8 @@ class FileTransferUDP:
         self.local_port = int(input('Enter your port: '))
 
         self.is_sender = bool(int(input(f'Enter an option: \n1. I\'m the receiver. \n2. I\'m the sender.\n')) - 1)
-        logging.warning(f'the basic attributes of FileTransferUDP has been initialized')
+        logging.info(f'the basic attributes of FileTransferUDP has been initialized')
+
         if self.is_sender:
             buffer_size_temp = int(input(f'Enter the package size: \n1. 1000 bytes\n2. 1500 bytes\n'))
             if buffer_size_temp == 1 or buffer_size_temp == 1000:
@@ -48,7 +48,7 @@ class FileTransferUDP:
             logging.warning(f'Called the sender method')
         else:
             self.receiver()
-            logging.info(f'Called the receiver method')
+            logging.warning(f'Called the receiver method')
 
     def __s_connect_with_tcp__(self):
         # Connecting with the tcp
@@ -94,13 +94,11 @@ class FileTransferUDP:
 
         bytes_ = self.socket_udp.recvfrom(1024)
         message = bytes_[0]
-        logging.warning(f'UDP bind check {message}')
-        logging.warning(f'New address {bytes_[1]}')
 
     def __s_send_package__(self, package, index):
         actual_package = package[0]
         packet_identifier = package[1]
-        logging.warning(f'sending package = (packet_identifier) = {packet_identifier}')
+        logging.info(f'sending package = (packet_identifier) = {packet_identifier}')
 
         # read the bytes from the file
         packet = (packet_identifier.to_bytes(4, "big") + index.to_bytes(4, "big") + actual_package)
@@ -109,15 +107,13 @@ class FileTransferUDP:
         # busy networks
         self.socket_udp.sendto(packet, (self.other_pc_ip, self.other_pc_port))
 
-        logging.info(f'sending one package')
-
     def __s_send_packages__(self, file_list):
         finished = False
         # while list is not empty
         logging.info(f'Sending packages')
         lost_packages = [None, None, None, None]
         while file_list:
-            logging.warning(f'len(file_list)={len(file_list)}')
+            logging.info(f'len(file_list)={len(file_list)}')
             if len(file_list) < 4:
                 end_range = len(file_list)
             else:
@@ -130,20 +126,18 @@ class FileTransferUDP:
             lost_packages.clear()
             lost_packages = [None, None, None, None]
             for i in range(0, end_range):
-                lost_packages[i] = int.from_bytes(lost_packages_temp[i*4:i*4+4], "big")
+                lost_packages[i] = int.from_bytes(lost_packages_temp[i * 4:i * 4 + 4], "big")
 
-            logging.warning(f'lost_packages={lost_packages}')
+            if len(lost_packages) != 0:
+                logging.warning(f'lost_packages={lost_packages}')
+
             for i in range(0, end_range):
                 temp = file_list[i]
-                logging.warning(f"file_list[{i}]={temp[1]}")
             # Removing the packages that have been sent from the list "to be sent"
             for p in range(0, end_range):
-                logging.warning(f'lost_packages.count({p})={lost_packages.count(p)}')
                 if lost_packages.count(p) == 0:
                     try:
-                        package = file_list[0]
-                        logging.warning(f'popping file[{0}] with id= {package[1]}')
-                        file_list.pop(0) # tava p e tava errado, é 0?
+                        file_list.pop(0)  # tava p e tava errado, é 0?
                         logging.info(f'One more package successfully sent')
                     except:
                         if not file_list:
@@ -162,8 +156,6 @@ class FileTransferUDP:
 
     def sender(self):
         start = time.time()
-
-        logging.info(f'Sender option selected')
         # Checking if the file exists
         if not os.path.exists(self.filename):
             logging.warning(f'Inserted file path doesn\'t exist {self.filename}')
@@ -220,11 +212,11 @@ class FileTransferUDP:
         self.socket_tcp.close()
 
         logging.info(f'Basic info received and connection closed')
-        logging.warning(f'Filename = {self.filename}')
-        logging.warning(f'File size = {self.file_size}')
-        logging.warning(f'Amount of packages = {self.amount_of_packages}')
-        logging.warning(f'Buffer size = {self.buffer_size}')
-        logging.warning(f'Header size = {self.header_size}')
+        logging.info(f'Filename = {self.filename}')
+        logging.info(f'File size = {self.file_size}')
+        logging.info(f'Amount of packages = {self.amount_of_packages}')
+        logging.info(f'Buffer size = {self.buffer_size}')
+        logging.info(f'Header size = {self.header_size}')
 
     def __r_connect_with_udp__(self):
         # Connecting with the udp
@@ -232,8 +224,8 @@ class FileTransferUDP:
         self.socket_udp.bind((self.local_ip, self.local_port))
         time.sleep(1)
         self.socket_udp.sendto("confirm".encode(), (self.other_pc_ip, self.other_pc_port))
-        logging.warning(f'Trying to connect via UDP')
         time.sleep(1)
+        logging.info(f'Trying to connect via UDP')
 
     def __r_receive_package__(self, position, file_list, lost_packages):
         last_one = False
@@ -241,46 +233,35 @@ class FileTransferUDP:
         # 4 because it's the amount of bytes of an integer
         # that represents the index of each package
         packet, ip = self.socket_udp.recvfrom(4 + 4 + self.buffer_size)
-        logging.warning(f'Received a package')
+        logging.info(f'Received a package')
 
         packet_identifier = int.from_bytes(packet[:4], "big")
         index = int.from_bytes(packet[4:8], "big")
         package = packet[8:]
-        logging.warning(f'packet_identifier={packet_identifier}')
-        logging.warning(f'index={index}')
+        logging.info(f'packet_identifier={packet_identifier}')
+        logging.info(f'index={index}')
 
         file_list[packet_identifier] = package
         if index != position:
             lost_packages.append(position)
 
-        # if position == index:
-        #     file_list[packet_identifier] = package
-        # else:
-        #     lost_packages.append(index)
-        if packet_identifier == self.amount_of_packages-1:
+        if packet_identifier == self.amount_of_packages - 1:
             last_one = True
-        logging.warning(f'gonna return')
         return file_list, lost_packages, last_one
 
     def __r_receive_packages__(self):
-        finished = False
-        # while list is not empty
         logging.warning(f'Receiving packages')
 
         file_list = [None] * self.amount_of_packages
-        # len(file_list) - file_list.count(None)
         lost_packages = []
-        # AQUIDE while len(file_list) != self.amount_of_packages:
+
         while file_list.count(None) > 0:
             lost_packages.clear()
             if file_list.count(None) < 4:
                 end_range = file_list.count(None)
             else:
                 end_range = 4
-            logging.warning(f'file_list.count(None)={file_list.count(None)}')
-            logging.warning(f'end_range={end_range}')
             for i in range(0, end_range):
-                logging.warning(f'Voltando no for')
                 file_list, lost_packages, finished = self.__r_receive_package__(i, file_list, lost_packages)
 
             logging.warning(f"lost_packages={lost_packages}\n")
@@ -294,15 +275,13 @@ class FileTransferUDP:
                       lost_packages[2].to_bytes(4, "big") + lost_packages[3].to_bytes(4, "big"))
 
             self.socket_udp.sendto(packet, (self.other_pc_ip, self.other_pc_port))
-
         return file_list
 
     def __r_write_file__(self, file_list):
         with open(self.filename, "wb") as file:
             for i in range(self.amount_of_packages):
                 file.write(file_list[i])
-
-        logging.warning(f'Finnished writting file')
+        logging.info(f'Finnished writting file')
 
     def __r_report_overall_performance__(self, start, end):
         total_time = end - start
