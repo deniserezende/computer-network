@@ -1,6 +1,7 @@
 from email import header
-import socket
 from tabnanny import filename_only
+
+import socket
 import tqdm
 import os 
 import time
@@ -14,7 +15,6 @@ BUFFER_SIZE = [500, 1000, 1500]
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
     # Using socket.SOCK_STREAM because the default protocol used is TCP
     # Using socket.AF_INET to use IPv4
-
 
     # The .bind() method is used to associate the socket with a specific network interface and port number
     server_socket.bind((SERVER_HOST, SERVER_PORT)) 
