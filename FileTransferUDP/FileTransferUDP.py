@@ -108,7 +108,6 @@ class FileTransferUDP:
         self.socket_udp.sendto(packet, (self.other_pc_ip, self.other_pc_port))
 
     def __s_send_packages__(self, file_list):
-        finished = False
         # while list is not empty
         logging.info(f'Sending packages')
         lost_packages = [None, None, None, None]
@@ -128,11 +127,6 @@ class FileTransferUDP:
             for i in range(0, end_range):
                 lost_packages[i] = int.from_bytes(lost_packages_temp[i * 4:i * 4 + 4], "big")
 
-            if len(lost_packages) != 0:
-                logging.warning(f'lost_packages={lost_packages}')
-
-            for i in range(0, end_range):
-                temp = file_list[i]
             # Removing the packages that have been sent from the list "to be sent"
             for p in range(0, end_range):
                 if lost_packages.count(p) == 0:
@@ -228,7 +222,6 @@ class FileTransferUDP:
         logging.info(f'Trying to connect via UDP')
 
     def __r_receive_package__(self, position, file_list, lost_packages):
-        last_one = False
         logging.info(f'Receiving a package')
         # 4 because it's the amount of bytes of an integer
         # that represents the index of each package
@@ -245,13 +238,10 @@ class FileTransferUDP:
         if index != position:
             lost_packages.append(position)
 
-        if packet_identifier == self.amount_of_packages - 1:
-            last_one = True
-        return file_list, lost_packages, last_one
+        return file_list, lost_packages
 
     def __r_receive_packages__(self):
-        logging.warning(f'Receiving packages')
-
+        logging.info(f'Receiving packages')
         file_list = [None] * self.amount_of_packages
         lost_packages = []
 
@@ -262,7 +252,7 @@ class FileTransferUDP:
             else:
                 end_range = 4
             for i in range(0, end_range):
-                file_list, lost_packages, finished = self.__r_receive_package__(i, file_list, lost_packages)
+                file_list, lost_packages = self.__r_receive_package__(i, file_list, lost_packages)
 
             logging.warning(f"lost_packages={lost_packages}\n")
 
@@ -283,9 +273,11 @@ class FileTransferUDP:
                 file.write(file_list[i])
         logging.info(f'Finnished writting file')
 
-    def __r_report_overall_performance__(self, start, end):
+    def __r_report_overall_performance__(self, start, end, lost_packages, received_packages):
         total_time = end - start
         print(f'\nTamanho do Arquivo Transmitido: {self.file_size} bytes')
+        print(f'Número de Pacotes Recebidos: {received_packages}')
+        print(f'Número de Pacotes Perdidos: {lost_packages}')
         print(f'Tempo de transmissão:  {round(total_time, 4)} s')
 
     def receiver(self):
@@ -301,5 +293,7 @@ class FileTransferUDP:
         self.socket_udp.close()
 
         end = time.time()
+        amount_lost_packages = file_list.count(None)
+        amount_received_packages = self.amount_of_packages - amount_lost_packages
         # Report overall performance
-        self.__r_report_overall_performance__(start, end)
+        self.__r_report_overall_performance__(start, end, amount_lost_packages, amount_received_packages)
