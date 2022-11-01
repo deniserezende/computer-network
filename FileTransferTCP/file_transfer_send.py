@@ -2,7 +2,6 @@ from email import header
 from tabnanny import filename_only
 
 import socket
-import tqdm
 import os 
 import time
 
@@ -70,7 +69,6 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
         check_sent = client_socket.recv(1024).decode()
 
         # start sending the file
-        progress = tqdm.tqdm(range(file_size), f"Sending {filename}", unit="B", unit_scale=True, unit_divisor=1024)
         with open(filename, "rb") as file:
             for j in range(amount_packages):
                 # read the bytes from the file
@@ -80,10 +78,6 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as server_socket:
                 # busy networks
                 client_socket.sendall(bytes_read)
 
-                # update the progress bar
-                progress.update(len(bytes_read))
-
-        progress.close()
         temp = client_socket.recv(4)
         header = int.from_bytes(temp, "little")
         client_socket.close()
