@@ -12,9 +12,13 @@ class SpeedTest:
         self.header_size = 8  # amount of bytes
         self.is_sender = False
         self.file_size = 0
-        self.data = 'teste de rede *2022*'
-        self.amount_of_packages = 25
-        self.buffer_size = self.data * self.amount_of_packages # 500 bytes
+        self.test = 'teste de rede *2022*'
+        self.buffer_size = 500
+        self.data = self.test * int(self.buffer_size / len(self.test))
+        self.amount_of_packages = 250000
+        self.lost_packages = 0
+        self.sent_packages = 0
+        self.received_packages = 0
 
         self.local_ip = ""
         self.port_one = 8080
@@ -23,12 +27,10 @@ class SpeedTest:
         # Using socket.AF_INET to use IPv4
         # Using socket.STREAM because the default protocol used is TCP
         self.socket_tcp = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
-        # Using socket.DGRAM because the default protocol used is UDP
-        self.socket_udp = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-
-        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+        self.client_socket = None
 
     def begin(self):
+        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
         self.is_sender = bool(int(input(f'Enter an option: \n1. I\'m the receiver. \n2. I\'m the sender.\n')) - 1)
         logging.info(f'the basic attributes of SpeedTest has been initialized')
 
@@ -49,9 +51,8 @@ class SpeedTest:
         # The .accept() method blocks execution and waits for an incoming connection.
         # When a client connects, it returns a new socket object representing the connection and a tuple holding
         # the address of the client.
-        client_socket, address = self.socket_tcp.accept()
+        self.client_socket, address = self.socket_tcp.accept()
         logging.info(f'Connected via tcp')
-        return client_socket
 
     def __s_create_list_of_data__(self):
         file_list = [(None, None)] * self.amount_of_packages
@@ -60,81 +61,65 @@ class SpeedTest:
             file_list[j] = (self.data, j)
         return file_list
 
-    # def __s_connect_with_udp__(self):
-    #     # Connecting with the udp
-    #     self.socket_udp = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-    #
-    #     # The .bind() method is used to associate the socket with a specific network interface and port number
-    #     self.socket_udp.bind((self.local_ip, self.port_two))
-    #
-    #     bytes_ = self.socket_udp.recvfrom(1024)
-    #     message = bytes_[0]
-
     def __s_send_package__(self, package, index):
         actual_package = package[0]
         packet_identifier = package[1]
         logging.info(f'sending package = (packet_identifier) = {packet_identifier}')
 
         # read the bytes from the file
-        packet = (packet_identifier.to_bytes(4, "big") + index.to_bytes(4, "big") + actual_package)
+        packet = (packet_identifier.to_bytes(4, "big") + index.to_bytes(4, "big") + actual_package.encode('utf-8'))
 
         # we use sendall to assure transmission in
         # busy networks
-        # self.socket_udp.sendto(packet, (self.other_pc_ip, self.port_one))
-        self.socket_tcp.sendall(packet)
+        try:
+            self.client_socket.sendall(packet)
+            self.sent_packages += 1
+            logging.error(f"incrementei")
+        except BrokenPipeError:
+            logging.error(f"Broken pipe")
 
     def __s_send_packages__(self, file_list):
         # while list is not empty
         logging.info(f'Sending packages')
-        lost_packages = [None, None, None, None]
 
         begin_time = time.time()
         running_time = 0
+        logging.error(f"begin_time={begin_time}")
 
+        i = 0
         while running_time <= 20:
-            if len(file_list) < 4:
-                end_range = len(file_list)
-            else:
-                end_range = 4
-            for i in range(0, end_range):
-                self.__s_send_package__(file_list[i], i)
-                time.sleep(0.1)
+            logging.error(f"sending new package")
+            self.__s_send_package__(file_list[i], i)
+            logging.error(f"sent new package")
+            i += 1
+            try:
+                lost_packages_temp = int.from_bytes(self.client_socket.recv(4), "big")
+                if lost_packages_temp == 1:
+                    self.lost_packages += 1
+            except ConnectionResetError:
+                logging.error(f"Connection reset by peer")
+                self.sent_packages -= 1
 
-            # lost_packages_temp, ip = self.socket_udp.recvfrom(16)
-            lost_packages_temp = self.socket_tcp.recv(16)
-            lost_packages.clear()
-            lost_packages = [None, None, None, None]
-            for i in range(0, end_range):
-                lost_packages[i] = int.from_bytes(lost_packages_temp[i * 4:i * 4 + 4], "big")
 
-            # Removing the packages that have been sent from the list "to be sent"
-            for p in range(0, end_range):
-                if lost_packages.count(p) == 0:
-                    try:
-                        file_list.pop(0)
-                        logging.info(f'One more package successfully sent')
-                    except:
-                        if not file_list:
-                            raise TypeError("List is empty")
             current = time.time()
-            running_time = begin_time - current
+            running_time = current - begin_time
+            logging.error(f"current={current}")
+            logging.error(f"running_time={running_time}")
 
     def __s_report_overall_performance__(self, start, end):
         total_time = end - start
-        file_size_bit = self.file_size * 8
-        speed = "{:,}".format(round(file_size_bit / total_time, 3)).replace('.', '/')
+        size_bit = self.buffer_size * self.sent_packages * 8  # bits
+        speed_value = round(size_bit / total_time, 3)
+        speed = "{:,}".format(speed_value).replace('.', '/')
         speed = speed.replace(',', '.')
         speed = speed.replace('/', ',')
-        print(f'Número de Pacotes Enviados: {self.amount_of_packages}')
-        print(f'Bytes Enviados: {self.buffer_size}')
+        print(f'Número de Pacotes Enviados: {self.sent_packages}')
+        print(f'Bytes Enviados: {self.sent_packages * self.buffer_size}')
+        print(f'Tempo de Transmissão: {total_time} s')  # bit / s
         print(f'Velocidade de Transmissão: {speed} bit/s')  # bit / s
+        print(f'Velocidade de Transmissão: {round(speed_value/1000000, 3)} Mbps')  # bit / s
 
     def sender(self):
-        # Checking if the file exists
-        if not os.path.exists(self.filename):
-            logging.warning(f'Inserted file path doesn\'t exist {self.filename}')
-            return
-
         start = time.time()
 
         logging.info(f'Connecting with tcp to begin sending data')
@@ -153,47 +138,12 @@ class SpeedTest:
     def __r_connect_with_tcp__(self):
         self.socket_tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # Uses .connect() to connect to the server
-        self.socket_tcp.connect((self.other_pc_ip, self.port_one))
+        self.socket_tcp.connect((self.local_ip, self.port_two))
 
-    def __r_receive_basic_info_via_tcp__(self):
-        self.__r_connect_with_tcp__()
-        # Receiving file information
-        # self.filename, self.file_size = self.socket_tcp.recv(1024).decode("ISO-8859-1").split(self.separator)
-
-        temp = self.socket_tcp.recv(4)
-        self.file_size = int.from_bytes(temp, "little")
-        temp = self.socket_tcp.recv(4)
-        self.amount_of_packages = int.from_bytes(temp, "little")
-        temp = self.socket_tcp.recv(4)
-        self.buffer_size = int.from_bytes(temp, "little")
-        temp = self.socket_tcp.recv(4)
-        self.header_size = int.from_bytes(temp, "little")
-        temp = self.socket_tcp.recv(1024)
-        self.filename = temp.decode("ISO-8859-1")
-
-        self.socket_tcp.close()
-
-        logging.info(f'Basic info received and connection closed')
-        logging.info(f'Filename = {self.filename}')
-        logging.info(f'File size = {self.file_size}')
-        logging.info(f'Amount of packages = {self.amount_of_packages}')
-        logging.info(f'Buffer size = {self.buffer_size}')
-        logging.info(f'Header size = {self.header_size}')
-
-    def __r_connect_with_udp__(self):
-        # Connecting with the udp
-        self.socket_udp = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
-        self.socket_udp.bind((self.local_ip, self.port_two))
-        time.sleep(1)
-        self.socket_udp.sendto("confirm".encode(), (self.other_pc_ip, self.port_one))
-        time.sleep(1)
-        logging.info(f'Trying to connect via UDP')
-
-    def __r_receive_package__(self, position, file_list, lost_packages):
+    def __r_receive_package__(self, position, file_list):
         logging.info(f'Receiving a package')
         # 4 because it's the amount of bytes of an integer
         # that represents the index of each package
-        # packet, ip = self.socket_udp.recvfrom(4 + 4 + self.buffer_size)
         packet = self.socket_tcp.recv(4 + 4 + self.buffer_size)
 
         logging.info(f'Received a package')
@@ -206,50 +156,36 @@ class SpeedTest:
 
         file_list[packet_identifier] = package
         if index != position:
-            lost_packages.append(position)
-
-        return file_list, lost_packages
+            self.lost_packages += 1
+            return file_list, 1
+        self.received_packages += 1
+        return file_list, 0
 
     def __r_receive_packages__(self):
         logging.info(f'Receiving packages')
         file_list = [None] * self.amount_of_packages
-        lost_packages = []
 
-        while file_list.count(None) > 0:
-            lost_packages.clear()
-            if file_list.count(None) < 4:
-                end_range = file_list.count(None)
-            else:
-                end_range = 4
-            for i in range(0, end_range):
-                file_list, lost_packages = self.__r_receive_package__(i, file_list, lost_packages)
+        begin_time = time.time()
+        running_time = 0
 
-            logging.warning(f"lost_packages={lost_packages}\n")
+        i = 0
+        while running_time <= 20:
+            file_list, lost_package = self.__r_receive_package__(i, file_list)
+            i += 1
 
-            lost_packages.append(7)
-            lost_packages.append(7)
-            lost_packages.append(7)
-            lost_packages.append(7)
+            packet = (lost_package.to_bytes(4, "big"))
 
-            packet = (lost_packages[0].to_bytes(4, "big") + lost_packages[1].to_bytes(4, "big") +
-                      lost_packages[2].to_bytes(4, "big") + lost_packages[3].to_bytes(4, "big"))
-
-            # self.socket_udp.sendto(packet, (self.other_pc_ip, self.port_one))
             self.socket_tcp.sendall(packet)
+
+            current = time.time()
+            running_time = current - begin_time
 
         return file_list
 
-    def __r_write_file__(self, file_list):
-        with open(self.filename, "wb") as file:
-            for i in range(self.amount_of_packages):
-                file.write(file_list[i])
-        logging.info(f'Finnished writting file')
-
     def __r_report_overall_performance__(self, start, end, lost_packages):
         total_time = end - start
-        received_packages = self.amount_of_packages - lost_packages
-        print(f'Número de Pacotes Recebidos: {received_packages}')
-        print(f'Número de Pacotes Perdidos: {lost_packages}')
+        print(f'Número de Pacotes Recebidos: {self.received_packages}')
+        print(f'Número de Pacotes Perdidos: {self.lost_packages}')
         print(f'Tempo de transmissão:  {round(total_time, 4)} s')
 
     def receiver(self):
