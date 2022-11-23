@@ -127,6 +127,8 @@ class SpeedTest:
         logging.info(f'Sending file by packages')
         file_list = self.__s_create_list_of_data__()
         self.__s_send_packages__(file_list)
+        logging.info(f'Receiving file by packages')
+        self.__r_receive_packages__()
         # Closing connection
         self.socket_tcp.close()
 
@@ -144,7 +146,10 @@ class SpeedTest:
         logging.info(f'Receiving a package')
         # 4 because it's the amount of bytes of an integer
         # that represents the index of each package
-        packet = self.socket_tcp.recv(4 + 4 + self.buffer_size)
+        try:
+            packet = self.socket_tcp.recv(4 + 4 + self.buffer_size)
+        except:
+            logging.error("")
 
         logging.info(f'Received a package')
 
@@ -182,7 +187,7 @@ class SpeedTest:
 
         return file_list
 
-    def __r_report_overall_performance__(self, start, end, lost_packages):
+    def __r_report_overall_performance__(self, start, end):
         total_time = end - start
         print(f'Número de Pacotes Recebidos: {self.received_packages}')
         print(f'Número de Pacotes Perdidos: {self.lost_packages}')
@@ -193,10 +198,13 @@ class SpeedTest:
 
         # TCP - Receiving file
         self.__r_connect_with_tcp__()
-        file_list = self.__r_receive_packages__()
+        logging.info(f'Receiving file by packages')
+        self.__r_receive_packages__()
+        logging.info(f'Sending file by packages')
+        file_list = self.__s_create_list_of_data__()
+        self.__s_send_packages__(file_list)
         self.socket_tcp.close()
 
         end = time.time()
-        amount_lost_packages = file_list.count(None)
         # Report overall performance
-        self.__r_report_overall_performance__(start, end, amount_lost_packages)
+        self.__r_report_overall_performance__(start, end)
