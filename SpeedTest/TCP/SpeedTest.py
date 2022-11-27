@@ -21,8 +21,8 @@ class SpeedTest:
         self.received_packages = 0
 
         self.local_ip = ""
-        self.port_one = 8080
-        self.port_two = 9090
+        self.port_one = 9090
+        self.other_ip = ""
 
         # Using socket.AF_INET to use IPv4
         # Using socket.STREAM because the default protocol used is TCP
@@ -35,9 +35,11 @@ class SpeedTest:
         logging.info(f'the basic attributes of SpeedTest has been initialized')
 
         if self.is_sender:
+            self.other_ip = input("Other pc ip: ")
             self.sender()
             logging.warning(f'Called the sender method')
         else:
+            self.local_ip = input("Server ip: ")
             self.receiver()
             logging.warning(f'Called the receiver method')
 
@@ -45,7 +47,7 @@ class SpeedTest:
         # Connecting with the tcp
         self.socket_tcp = socket.socket(family=socket.AF_INET, type=socket.SOCK_STREAM)
         # The .bind() method is used to associate the socket with a specific network interface and port number
-        self.socket_tcp.bind((self.local_ip, self.port_two))
+        self.socket_tcp.bind((self.local_ip, self.port_one))
         # The .listen() method enables a server to accept connections.
         self.socket_tcp.listen(1)
         # The .accept() method blocks execution and waits for an incoming connection.
@@ -129,6 +131,7 @@ class SpeedTest:
         logging.info(f'Receiving file by packages')
         self.socket_tcp.close()
         time.sleep(1)
+        self.local_ip = self.other_ip  # Acho
         self.__r_connect_with_tcp__()
         self.__r_receive_packages__()
         # Closing connection
@@ -142,7 +145,7 @@ class SpeedTest:
     def __r_connect_with_tcp__(self):
         self.socket_tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # Uses .connect() to connect to the server
-        self.socket_tcp.connect((self.local_ip, self.port_two))
+        self.socket_tcp.connect((self.local_ip, self.port_one))
 
     def __r_receive_package__(self, position, file_list):
         logging.info(f'Receiving a package')
@@ -208,6 +211,7 @@ class SpeedTest:
         logging.info(f'Sending file by packages')
         self.socket_tcp.close()
         time.sleep(1)
+        self.local_ip = self.other_ip  # Acho
         self.__s_connect_with_tcp__()
         file_list = self.__s_create_list_of_data__()
         self.__s_send_packages__(file_list)
