@@ -15,7 +15,7 @@ class SpeedTest:
         self.test = 'teste de rede *2022*'
         self.buffer_size = 500
         self.data = self.test * int(self.buffer_size / len(self.test))
-        self.amount_of_packages = 250000
+        self.amount_of_packages = 2500000
         self.lost_packages = 0
         self.sent_packages = 0
         self.received_packages = 0
@@ -30,7 +30,7 @@ class SpeedTest:
         self.client_socket = None
 
     def begin(self):
-        logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+        # logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
         self.is_sender = bool(int(input(f'Enter an option: \n1. I\'m the receiver. \n2. I\'m the sender.\n')) - 1)
         logging.info(f'the basic attributes of SpeedTest has been initialized')
 
@@ -74,9 +74,10 @@ class SpeedTest:
         try:
             self.client_socket.sendall(packet)
             self.sent_packages += 1
-            logging.error(f"incrementei")
         except BrokenPipeError:
             logging.error(f"Broken pipe")
+        except AttributeError:
+            logging.error(f"'NoneType' object has no attribute 'sendall'\nConnection closed.")
 
     def __s_send_packages__(self, file_list):
         # while list is not empty
@@ -84,13 +85,10 @@ class SpeedTest:
 
         begin_time = time.time()
         running_time = 0
-        logging.error(f"begin_time={begin_time}")
 
         i = 0
         while running_time <= 20:
-            logging.error(f"sending new package")
             self.__s_send_package__(file_list[i], i)
-            logging.error(f"sent new package")
             i += 1
             try:
                 lost_packages_temp = int.from_bytes(self.client_socket.recv(4), "big")
@@ -99,12 +97,13 @@ class SpeedTest:
             except ConnectionResetError:
                 logging.error(f"Connection reset by peer")
                 self.sent_packages -= 1
-
+                break
+            except AttributeError:
+                logging.error(f"'NoneType' object has no attribute 'sendall'\nConnection closed.")
 
             current = time.time()
             running_time = current - begin_time
-            logging.error(f"current={current}")
-            logging.error(f"running_time={running_time}")
+            logging.info(f'running_time={running_time}')
 
     def __s_report_overall_performance__(self, start, end):
         total_time = end - start
@@ -117,7 +116,7 @@ class SpeedTest:
         print(f'Bytes Enviados: {self.sent_packages * self.buffer_size}')
         print(f'Tempo de Transmissão: {total_time} s')  # bit / s
         print(f'Velocidade de Transmissão: {speed} bit/s')  # bit / s
-        print(f'Velocidade de Transmissão: {round(speed_value/1000000, 3)} Mbps')  # bit / s
+        print(f'Velocidade de Transmissão: {round(speed_value / 1000000, 3)} Mbps')  # bit / s
 
     def sender(self):
         start = time.time()
@@ -128,6 +127,9 @@ class SpeedTest:
         file_list = self.__s_create_list_of_data__()
         self.__s_send_packages__(file_list)
         logging.info(f'Receiving file by packages')
+        self.socket_tcp.close()
+        time.sleep(1)
+        self.__r_connect_with_tcp__()
         self.__r_receive_packages__()
         # Closing connection
         self.socket_tcp.close()
@@ -148,23 +150,23 @@ class SpeedTest:
         # that represents the index of each package
         try:
             packet = self.socket_tcp.recv(4 + 4 + self.buffer_size)
+            logging.info(f'Received a package')
+            packet_identifier = int.from_bytes(packet[:4], "big")
+            index = int.from_bytes(packet[4:8], "big")
+            package = packet[8:]
+            logging.info(f'packet_identifier={packet_identifier}')
+            logging.info(f'index={index}')
+
+            file_list[packet_identifier] = package
+            if index != position:
+                self.lost_packages += 1
+                return file_list, 1
+            self.received_packages += 1
+            return file_list, 0
+
         except:
             logging.error("")
-
-        logging.info(f'Received a package')
-
-        packet_identifier = int.from_bytes(packet[:4], "big")
-        index = int.from_bytes(packet[4:8], "big")
-        package = packet[8:]
-        logging.info(f'packet_identifier={packet_identifier}')
-        logging.info(f'index={index}')
-
-        file_list[packet_identifier] = package
-        if index != position:
-            self.lost_packages += 1
             return file_list, 1
-        self.received_packages += 1
-        return file_list, 0
 
     def __r_receive_packages__(self):
         logging.info(f'Receiving packages')
@@ -179,11 +181,14 @@ class SpeedTest:
             i += 1
 
             packet = (lost_package.to_bytes(4, "big"))
-
-            self.socket_tcp.sendall(packet)
+            try:
+                self.socket_tcp.sendall(packet)
+            except OSError:
+                logging.error(f'[Errno 57] Socket is not connected')
 
             current = time.time()
             running_time = current - begin_time
+            logging.info(f'running_time={running_time}')
 
         return file_list
 
@@ -201,6 +206,9 @@ class SpeedTest:
         logging.info(f'Receiving file by packages')
         self.__r_receive_packages__()
         logging.info(f'Sending file by packages')
+        self.socket_tcp.close()
+        time.sleep(1)
+        self.__s_connect_with_tcp__()
         file_list = self.__s_create_list_of_data__()
         self.__s_send_packages__(file_list)
         self.socket_tcp.close()
