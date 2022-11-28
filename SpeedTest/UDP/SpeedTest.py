@@ -103,19 +103,19 @@ class SpeedTest:
         # Report overall performance
         self.__s_report_overall_performance__(start, end)
 
-        # start = time.time()
-        # # temp = self.local_ip
-        # # self.local_ip = self.other_pc_ip  # Acho
-        # # self.other_pc_ip = temp
-        # self.__r_connect_with_udp__()
-        # self.__r_receive_packages__()
-        # self.socket_udp.close()
-        #
-        # end = time.time()
-        # amount_lost_packages = self.counter
-        # amount_received_packages = self.amount_received_packages - amount_lost_packages
+        start = time.time()
+        temp = self.local_ip
+        self.local_ip = self.other_pc_ip  # Acho
+        self.other_pc_ip = temp
+        self.__r_connect_with_udp__()
+        self.__r_receive_packages__()
+        self.socket_udp.close()
+        
+        end = time.time()
+        amount_lost_packages = self.counter
+        amount_received_packages = self.amount_received_packages - amount_lost_packages
         # # Report overall performance
-        # self.__r_report_overall_performance__(start, end, amount_lost_packages, amount_received_packages)
+        self.__r_report_overall_performance__(start, end, amount_lost_packages, amount_received_packages)
 
     def __r_connect_with_udp__(self):
         # Connecting with the udp
@@ -173,16 +173,16 @@ class SpeedTest:
         self.__r_report_overall_performance__(start, end, amount_lost_packages, amount_received_packages)
         # time.sleep(1)
         #
-        # start = time.time()
-        # # temp = self.local_ip
-        # # self.local_ip = self.other_pc_ip  # Acho
-        # # self.other_pc_ip = temp
-        # self.__s_connect_with_udp__()
-        # self.__s_send_packages__()
-        # self.socket_udp.close()
+        start = time.time()
+        temp = self.local_ip
+        self.local_ip = self.other_pc_ip  # Acho
+        self.other_pc_ip = temp
+        self.__s_connect_with_udp__()
+        self.__s_send_packages__()
+        self.socket_udp.close()
         #
-        # end = time.time()
-        # amount_lost_packages = self.counter
-        # amount_received_packages = self.amount_received_packages - amount_lost_packages
-        # # Report overall performance
-        # self.__s_report_overall_performance__(start, end)
+        end = time.time()
+        amount_lost_packages = self.counter
+        amount_received_packages = self.amount_received_packages - amount_lost_packages
+        ## Report overall performance
+        self.__s_report_overall_performance__(start, end)
