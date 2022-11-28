@@ -15,7 +15,7 @@ class SpeedTest:
         self.test = 'teste de rede *2022*'
         self.buffer_size = 500
         self.data = self.test * int(self.buffer_size / len(self.test))
-        self.amount_of_packages = 2500000
+        self.amount_of_packages = 25000000
         self.lost_packages = 0
         self.sent_packages = 0
         self.received_packages = 0
@@ -130,7 +130,14 @@ class SpeedTest:
         self.__s_send_packages__(file_list)
         logging.info(f'Receiving file by packages')
         self.socket_tcp.close()
+        end = time.time()
+
+        # Report overall performance
+        self.__s_report_overall_performance__(start, end)
+
         time.sleep(1)
+
+        start = time.time()
         self.local_ip = self.other_ip  # Acho
         self.__r_connect_with_tcp__()
         self.__r_receive_packages__()
@@ -140,7 +147,7 @@ class SpeedTest:
         end = time.time()
 
         # Report overall performance
-        self.__s_report_overall_performance__(start, end)
+        self.__r_report_overall_performance__(start, end)
 
     def __r_connect_with_tcp__(self):
         self.socket_tcp = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -210,7 +217,13 @@ class SpeedTest:
         self.__r_receive_packages__()
         logging.info(f'Sending file by packages')
         self.socket_tcp.close()
+
+        end = time.time()
+        # Report overall performance
+        self.__r_report_overall_performance__(start, end)
         time.sleep(1)
+
+        start = time.time()
         self.local_ip = self.other_ip  # Acho
         self.__s_connect_with_tcp__()
         file_list = self.__s_create_list_of_data__()
@@ -219,4 +232,4 @@ class SpeedTest:
 
         end = time.time()
         # Report overall performance
-        self.__r_report_overall_performance__(start, end)
+        self.__s_report_overall_performance__(start, end)
