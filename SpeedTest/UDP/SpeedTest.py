@@ -8,12 +8,14 @@ class SpeedTest:
     def __init__(self):
         logging.info(f'__init__ of SpeedTest was called.')
         self.is_sender = False
-        self.data = "teste de rede *2022*"
         self.amount_of_packages = 25
         self.amount_of_lostpackages = 0
         self.amount_received_packgs = 0
+        self.sent_packages = 0
         self.counter = 0
-        self.buffer_size = len(self.data) * self.amount_of_packages # 500 bytes"
+        self.test = 'teste de rede *2022*'
+        self.buffer_size = 500
+        self.data = self.test * int(self.buffer_size / len(self.test))
 
         self.other_pc_ip = ""
         self.local_ip = ""
@@ -51,8 +53,12 @@ class SpeedTest:
         message = bytes_[0]
 
     def __s_send_package__(self, string):
-        logging.info(f'sending string!')
-        self.socket_udp.sendto(string.encode(), (self.other_pc_ip, self.other_pc_port))
+        logging.info(f'sending strings!')
+        try:
+            self.socket_udp.sendto(string.encode(), (self.other_pc_ip, self.other_pc_port))
+            self.sent_packages += 1
+        except BrokenPipeError:
+            logging.error(f"Broken pipe")
 
     def __s_send_packages__(self):
         logging.info(f'Sending packages')
@@ -68,15 +74,16 @@ class SpeedTest:
 
     def __s_report_overall_performance__(self, start, end):
         total_time = end - start
-        amount_bits = self.buffer_size * 8
-        speed = "{:,}".format(round(amount_bits / total_time, 3)).replace('.', '/')
+        size_bit = self.buffer_size * self.sent_packages * 8  # bits
+        speed_value = round(size_bit / total_time, 3)
+        speed = "{:,}".format(speed_value).replace('.', '/')
         speed = speed.replace(',', '.')
         speed = speed.replace('/', ',')
-        #TODO Arrumar relatorios
-        print(f'\nTamanho do Arquivo Transmitido: {0} bytes')
-        print(f'Número de Pacotes Enviados: {self.amount_of_packages}')
-        print(f'Tempo de transmissão:  {round(total_time, 4)} s')
+        print(f'Número de Pacotes Enviados: {self.sent_packages}')
+        print(f'Bytes Enviados: {self.sent_packages * self.buffer_size}')
+        print(f'Tempo de Transmissão: {total_time} s')  # bit / s
         print(f'Velocidade de Transmissão: {speed} bit/s')  # bit / s
+        print(f'Velocidade de Transmissão: {round(speed_value/1000000, 3)} Mbps')  # bit / s
 
     def sender(self):
         start = time.time()
@@ -110,13 +117,11 @@ class SpeedTest:
         # 4 because it's the amount of bytes of an integer
         # that represents the index of each package
         string, ip = self.socket_udp.recvfrom(4 + 4 + self.buffer_size)
-        print(f'Texto recebido: {string}')
         if(string == ""):
             self.counter+=1
         else:
             self.amount_received_packgs+=1
 
-        logging.info(f'Received a string')
         return string
 
     def __r_receive_packages__(self):
