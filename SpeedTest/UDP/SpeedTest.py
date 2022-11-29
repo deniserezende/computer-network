@@ -9,8 +9,8 @@ class SpeedTest:
         logging.info(f'__init__ of SpeedTest was called.')
         self.is_sender = False
         self.amount_of_packages = 25
-        self.amount_of_lost_packages = 0
-        self.amount_received_packages = 0
+        self.amount_of_lostpackages = 0
+        self.amount_received_packgs = 0
         self.sent_packages = 0
         self.counter = 0
         self.test = 'teste de rede *2022*'
@@ -26,21 +26,19 @@ class SpeedTest:
         self.socket_udp = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
 
     def begin(self):
-        self.is_sender = bool(int(input(f'Enter an option: \n1. I\'m the receiver. \n2. I\'m the sender.\n')) - 1)
-
+        print("MENU")
         self.other_pc_ip = input('Enter the other computers ip: ')
         self.local_ip = input('Enter your ip: ')
         self.other_pc_port = int(input('Enter the other computers port: '))
         self.local_port = int(input('Enter your port: '))
 
+        self.is_sender = bool(int(input(f'Enter an option: \n1. I\'m the receiver. \n2. I\'m the sender.\n')) - 1)
         logging.info(f'the basic attributes of SpeedTest has been initialized')
 
         if self.is_sender:
-            # self.other_pc_ip = input("Other pc ip: ")
             self.sender()
             logging.warning(f'Called the sender method')
         else:
-            # self.local_ip = input("Server ip: ")
             self.receiver()
             logging.warning(f'Called the receiver method')
 
@@ -57,12 +55,10 @@ class SpeedTest:
     def __s_send_package__(self, string):
         logging.info(f'sending strings!')
         try:
-            self.socket_udp.sendto(string.encode('utf-8'), (self.other_pc_ip, self.other_pc_port))
+            self.socket_udp.sendto(string.encode(), (self.other_pc_ip, self.other_pc_port))
             self.sent_packages += 1
         except BrokenPipeError:
             logging.error(f"Broken pipe")
-        except OSError:
-            logging.error(f"OSError")
 
     def __s_send_packages__(self):
         logging.info(f'Sending packages')
@@ -91,6 +87,7 @@ class SpeedTest:
 
     def sender(self):
         start = time.time()
+
         # UDP - Sending string
         logging.info(f'Connecting with udp to begin sending the data')
         self.__s_connect_with_udp__()
@@ -99,23 +96,9 @@ class SpeedTest:
         self.socket_udp.close()
 
         end = time.time()
-        time.sleep(1)
+
         # Report overall performance
         self.__s_report_overall_performance__(start, end)
-
-        start = time.time()
-        temp = self.local_ip
-        self.local_ip = self.other_pc_ip  # Acho
-        self.other_pc_ip = temp
-        self.__r_connect_with_udp__()
-        self.__r_receive_packages__()
-        self.socket_udp.close()
-        
-        end = time.time()
-        amount_lost_packages = self.counter
-        amount_received_packages = self.amount_received_packages - amount_lost_packages
-        # # Report overall performance
-        self.__r_report_overall_performance__(start, end, amount_lost_packages, amount_received_packages)
 
     def __r_connect_with_udp__(self):
         # Connecting with the udp
@@ -134,7 +117,7 @@ class SpeedTest:
         if(string == ""):
             self.counter+=1
         else:
-            self.amount_received_packages+=1
+            self.amount_received_packgs+=1
 
         return string
 
@@ -153,9 +136,9 @@ class SpeedTest:
 
     def __r_report_overall_performance__(self, start, end, lost_packages, received_packages):
         total_time = end - start
-        #TODO arrumar relatorios
+    
         print(f'Número de Pacotes Recebidos: {received_packages}')
-        # print(f'Número de Pacotes Perdidos: {lost_packages}')
+        print(f'Número de Pacotes Perdidos: {lost_packages}')
         print(f'Tempo de transmissão:  {round(total_time, 4)} s')
 
     def receiver(self):
@@ -168,21 +151,6 @@ class SpeedTest:
 
         end = time.time()
         amount_lost_packages = self.counter
-        amount_received_packages = self.amount_received_packages - amount_lost_packages
+        amount_received_packages = self.amount_received_packgs - amount_lost_packages
         # Report overall performance
         self.__r_report_overall_performance__(start, end, amount_lost_packages, amount_received_packages)
-        # time.sleep(1)
-        #
-        start = time.time()
-        temp = self.local_ip
-        self.local_ip = self.other_pc_ip  # Acho
-        self.other_pc_ip = temp
-        self.__s_connect_with_udp__()
-        self.__s_send_packages__()
-        self.socket_udp.close()
-        #
-        end = time.time()
-        amount_lost_packages = self.counter
-        amount_received_packages = self.amount_received_packages - amount_lost_packages
-        ## Report overall performance
-        self.__s_report_overall_performance__(start, end)
